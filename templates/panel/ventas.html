@@ -1,0 +1,240 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Ventas — Panel Brana{% endblock %}
+
+{% block content %}
+<div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- ── REGISTRAR VENTA ── -->
+  <div>
+    <h1 class="text-xl font-semibold text-[#3D3535] mb-4">Registrar venta</h1>
+
+    <!-- Buscador -->
+    <div class="bg-white rounded-2xl border border-[#C7AFB3]/20 shadow-sm p-5 space-y-4">
+      <div class="flex gap-2">
+        <input type="text" id="buscar-input" placeholder="ID o nombre del producto..."
+               class="flex-1 border border-[#C7AFB3]/40 rounded-xl px-4 py-2.5 text-sm
+                      focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+        <button onclick="buscarProducto()"
+                class="bg-[#C7AFB3] hover:bg-[#b09a9e] text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+          Buscar
+        </button>
+      </div>
+
+      <!-- Resultado del producto -->
+      <div id="producto-encontrado" class="hidden">
+        <div class="flex gap-4 p-4 bg-[#FDFAF8] rounded-xl border border-[#C7AFB3]/20">
+          <img id="prod-img" src="" alt="" class="w-16 h-16 rounded-xl object-cover flex-shrink-0"/>
+          <div class="flex-1">
+            <p id="prod-name" class="font-semibold text-[#3D3535]"></p>
+            <p id="prod-price" class="text-[#C7AFB3] font-bold text-lg"></p>
+            <p id="prod-stock" class="text-xs text-[#3D3535]/50"></p>
+          </div>
+        </div>
+
+        <!-- Talla -->
+        <div id="tallas-container" class="mt-3">
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-2">Talla</label>
+          <div id="tallas-btns" class="flex gap-2 flex-wrap"></div>
+        </div>
+
+        <!-- Cantidad -->
+        <div class="mt-3 flex items-center gap-3">
+          <label class="text-xs uppercase tracking-wide text-[#3D3535]/50">Cantidad</label>
+          <div class="flex items-center gap-2">
+            <button onclick="cambiarCantidad(-1)"
+                    class="w-8 h-8 rounded-full border border-[#C7AFB3]/40 text-[#C7AFB3] hover:bg-[#C7AFB3] hover:text-white transition-colors font-bold">−</button>
+            <span id="qty-display" class="w-8 text-center font-semibold">1</span>
+            <button onclick="cambiarCantidad(1)"
+                    class="w-8 h-8 rounded-full border border-[#C7AFB3]/40 text-[#C7AFB3] hover:bg-[#C7AFB3] hover:text-white transition-colors font-bold">+</button>
+          </div>
+        </div>
+
+        <button onclick="agregarAlTicket()"
+                class="mt-4 w-full bg-[#FFE8DB] hover:bg-[#C7AFB3] hover:text-white text-[#3D3535]
+                       text-sm font-semibold py-2.5 rounded-full transition-colors">
+          + Agregar al ticket
+        </button>
+      </div>
+    </div>
+
+    <!-- Ticket acumulado -->
+    <div class="mt-4 bg-white rounded-2xl border border-[#C7AFB3]/20 shadow-sm p-5">
+      <h2 class="font-semibold text-[#3D3535] mb-3">Ticket</h2>
+      <div id="ticket-items" class="space-y-2 min-h-[60px]">
+        <p class="text-sm text-[#3D3535]/40 text-center py-4">Sin productos aún</p>
+      </div>
+      <div class="border-t border-[#C7AFB3]/20 pt-3 mt-3 flex justify-between items-center">
+        <span class="font-semibold text-[#3D3535]">Total</span>
+        <span id="ticket-total" class="text-xl font-bold text-[#C7AFB3]">$0.00</span>
+      </div>
+      <button onclick="confirmarVenta()"
+              class="mt-4 w-full bg-[#C7AFB3] hover:bg-[#b09a9e] text-white font-semibold
+                     py-3 rounded-full text-sm transition-colors">
+        Confirmar venta ✓
+      </button>
+    </div>
+  </div>
+
+  <!-- ── HISTORIAL DEL DÍA ── -->
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-[#3D3535]">Ventas de hoy</h2>
+      <span class="text-sm font-bold text-[#C7AFB3]">Total: ${{ total_dia }}</span>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-[#C7AFB3]/20 shadow-sm overflow-hidden">
+      {% if sales %}
+      <div class="divide-y divide-[#C7AFB3]/10">
+        {% for s in sales %}
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-[#3D3535]">{{ s.product.name }}</p>
+            <p class="text-xs text-[#3D3535]/50">
+              {% if s.size %}Talla {{ s.size.name }} · {% endif %}
+              x{{ s.quantity }} · {{ s.get_source_display }}
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-bold text-[#C7AFB3]">${{ s.total }}</p>
+            <p class="text-xs text-[#3D3535]/40">{{ s.created_at|date:"H:i" }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-[#3D3535]/40">
+        <p class="text-3xl mb-2">🧾</p>
+        <p class="text-sm">Sin ventas hoy todavia</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let productoActual = null;
+  let tallaSeleccionada = null;
+  let cantidadActual = 1;
+  let ticketItems = [];
+
+  async function buscarProducto() {
+    const q = document.getElementById('buscar-input').value.trim();
+    if (!q) return;
+    const res  = await fetch(`/panel/ventas/buscar/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    if (!data.ok) { showPanelToast(data.error); return; }
+
+    productoActual    = data;
+    tallaSeleccionada = null;
+    cantidadActual    = 1;
+    document.getElementById('qty-display').textContent = 1;
+
+    document.getElementById('prod-img').src       = data.image || '';
+    document.getElementById('prod-name').textContent  = data.name;
+    document.getElementById('prod-price').textContent = '$' + data.price;
+    document.getElementById('prod-stock').textContent = 'Stock: ' + data.stock;
+
+    // Tallas
+    const btns = document.getElementById('tallas-btns');
+    btns.innerHTML = '';
+    if (data.sizes.length > 0) {
+      data.sizes.forEach(s => {
+        const b = document.createElement('button');
+        b.textContent = s.name;
+        b.dataset.id  = s.id;
+        b.className   = 'talla-btn border border-[#C7AFB3]/40 text-sm px-3 py-1.5 rounded-xl hover:bg-[#C7AFB3] hover:text-white transition-colors';
+        b.onclick = () => {
+          document.querySelectorAll('.talla-btn').forEach(x => x.classList.remove('bg-[#C7AFB3]', 'text-white'));
+          b.classList.add('bg-[#C7AFB3]', 'text-white');
+          tallaSeleccionada = { id: s.id, name: s.name };
+        };
+        btns.appendChild(b);
+      });
+      document.getElementById('tallas-container').classList.remove('hidden');
+    } else {
+      document.getElementById('tallas-container').classList.add('hidden');
+    }
+
+    document.getElementById('producto-encontrado').classList.remove('hidden');
+  }
+
+  function cambiarCantidad(delta) {
+    cantidadActual = Math.max(1, cantidadActual + delta);
+    document.getElementById('qty-display').textContent = cantidadActual;
+  }
+
+  function agregarAlTicket() {
+    if (!productoActual) return;
+    ticketItems.push({
+      product_id: productoActual.id,
+      name:       productoActual.name,
+      price:      parseFloat(productoActual.price),
+      qty:        cantidadActual,
+      size_id:    tallaSeleccionada ? tallaSeleccionada.id : null,
+      size_name:  tallaSeleccionada ? tallaSeleccionada.name : null,
+    });
+    renderTicket();
+    document.getElementById('producto-encontrado').classList.add('hidden');
+    document.getElementById('buscar-input').value = '';
+    productoActual = null;
+  }
+
+  function renderTicket() {
+    const container = document.getElementById('ticket-items');
+    if (ticketItems.length === 0) {
+      container.innerHTML = '<p class="text-sm text-[#3D3535]/40 text-center py-4">Sin productos aun</p>';
+      document.getElementById('ticket-total').textContent = '$0.00';
+      return;
+    }
+    container.innerHTML = '';
+    let total = 0;
+    ticketItems.forEach((item, i) => {
+      const sub = item.price * item.qty;
+      total += sub;
+      const div = document.createElement('div');
+      div.className = 'flex items-center justify-between text-sm';
+      div.innerHTML = `
+        <div>
+          <p class="font-medium">${item.name}</p>
+          <p class="text-xs text-[#3D3535]/50">${item.size_name ? 'Talla ' + item.size_name + ' · ' : ''}x${item.qty}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="font-semibold text-[#C7AFB3]">$${sub.toFixed(2)}</span>
+          <button onclick="quitarItem(${i})" class="text-red-400 hover:text-red-600 text-xs">✕</button>
+        </div>`;
+      container.appendChild(div);
+    });
+    document.getElementById('ticket-total').textContent = '$' + total.toFixed(2);
+  }
+
+  function quitarItem(i) {
+    ticketItems.splice(i, 1);
+    renderTicket();
+  }
+
+  async function confirmarVenta() {
+    if (ticketItems.length === 0) { showPanelToast('Agrega productos al ticket.'); return; }
+    const res  = await fetch("{% url 'store:panel_registrar_venta' %}", {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({ items: ticketItems }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showPanelToast('¡Venta registrada! 🎉');
+      ticketItems = [];
+      renderTicket();
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showPanelToast('Error: ' + data.error);
+    }
+  }
+
+  // Enter en el buscador
+  document.getElementById('buscar-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') buscarProducto();
+  });
+</script>
+{% endblock %}

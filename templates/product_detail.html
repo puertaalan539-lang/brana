@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }} — Brana{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+  <!-- Breadcrumb -->
+  <nav class="text-xs text-charcoal/50 mb-6 flex gap-2 items-center">
+    <a href="{% url 'store:catalog' %}" class="hover:text-mauve">Catálogo</a>
+    <span>/</span>
+    <span class="text-charcoal">{{ product.name }}</span>
+  </nav>
+
+  <div class="grid md:grid-cols-2 gap-10 items-start">
+
+    <!-- Imagen -->
+    <div class="rounded-3xl overflow-hidden aspect-[3/4] bg-peach/20">
+      {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}"
+             class="w-full h-full object-cover">
+      {% else %}
+        <div class="w-full h-full flex items-center justify-center text-6xl">🛍️</div>
+      {% endif %}
+    </div>
+
+    <!-- Info -->
+    <div class="space-y-5">
+      <div>
+        <p class="text-xs text-mauve uppercase tracking-[0.2em] mb-1">
+          {{ product.get_gender_display }} · {{ product.get_style_display }}
+        </p>
+        <h1 class="text-3xl font-semibold text-charcoal">{{ product.name }}</h1>
+      </div>
+
+      <p class="text-2xl font-bold text-mauve">${{ product.price }}</p>
+
+      <p class="text-sm text-charcoal/70 leading-relaxed">{{ product.description }}</p>
+
+      <!-- Tallas -->
+      {% if product.sizes.all %}
+      <div>
+        <p class="text-xs uppercase tracking-wider text-charcoal/50 mb-2 font-medium">Tallas disponibles</p>
+        <div class="flex gap-2 flex-wrap">
+          {% for size in product.sizes.all %}
+            <button class="size-btn border-2 border-mauve/40 text-sm text-mauve
+                           px-3 py-1.5 rounded-xl hover:bg-mauve hover:text-white
+                           transition-colors font-medium">
+              {{ size.name }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Stock -->
+      <p class="text-sm {% if product.stock > 0 %}text-green-600{% else %}text-red-400{% endif %}">
+        {% if product.stock > 0 %}
+          ✓ En stock ({{ product.stock }} disponibles)
+        {% else %}
+          ✗ Agotado
+        {% endif %}
+      </p>
+
+      <!-- Botón añadir -->
+      <button
+        onclick="addToCart({{ product.id }}, '{{ product.name }}')"
+        {% if product.stock == 0 %}disabled{% endif %}
+        class="w-full bg-mauve hover:bg-mauve2 disabled:bg-mauve/30 disabled:cursor-not-allowed
+               text-white font-semibold py-3.5 rounded-full transition-colors text-sm
+               flex items-center justify-center gap-2 shadow-md">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        Añadir a la bolsa
+      </button>
+
+      <a href="{% url 'store:catalog' %}"
+         class="block text-center text-sm text-mauve hover:underline">← Seguir comprando</a>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  // Selección de talla visual
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.size-btn').forEach(b => {
+        b.classList.remove('bg-mauve', 'text-white');
+        b.classList.add('text-mauve');
+      });
+      btn.classList.add('bg-mauve', 'text-white');
+      btn.classList.remove('text-mauve');
+    });
+  });
+</script>
+{% endblock %}
+{% endblock %}

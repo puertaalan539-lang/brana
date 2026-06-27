@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Brana — Acceso</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Jost', sans-serif; background: #FDFAF8; }</style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 rounded-full bg-[#C7AFB3] flex items-center justify-center mx-auto mb-3">
+        <span class="text-[#FFE8DB] font-semibold text-xl">br</span>
+      </div>
+      <h1 class="text-2xl font-semibold text-[#3D3535]">brana</h1>
+      <p class="text-xs text-[#C7AFB3] tracking-widest uppercase">panel administrativo</p>
+    </div>
+
+    <!-- Formulario -->
+    <form method="POST" class="bg-white rounded-2xl shadow-sm border border-[#C7AFB3]/20 p-6 space-y-4">
+      {% csrf_token %}
+
+      {% if error %}
+      <div class="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2 rounded-xl">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="block text-xs text-[#3D3535]/50 uppercase tracking-wide mb-1">Usuario</label>
+        <input type="text" name="username" required autofocus
+               class="w-full border border-[#C7AFB3]/40 rounded-xl px-4 py-2.5 text-sm
+                      focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+      </div>
+
+      <div>
+        <label class="block text-xs text-[#3D3535]/50 uppercase tracking-wide mb-1">Contraseña</label>
+        <input type="password" name="password" required
+               class="w-full border border-[#C7AFB3]/40 rounded-xl px-4 py-2.5 text-sm
+                      focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-[#C7AFB3] hover:bg-[#b09a9e] text-white font-semibold
+                     py-3 rounded-full transition-colors text-sm">
+        Entrar al panel
+      </button>
+    </form>
+
+    <p class="text-center mt-4 text-xs text-[#3D3535]/40">
+      <a href="/" class="hover:text-[#C7AFB3]">← Volver a la tienda</a>
+    </p>
+  </div>
+</body>
+</html>

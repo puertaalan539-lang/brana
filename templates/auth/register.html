@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Crear cuenta — Brana{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 rounded-full bg-mauve flex items-center justify-center mx-auto mb-3">
+        <span class="text-peach font-semibold text-lg">br</span>
+      </div>
+      <h1 class="text-2xl font-semibold text-charcoal">Crear cuenta</h1>
+      <p class="text-sm text-charcoal/50 mt-1">Únete a la familia Brana 🌸</p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="bg-white rounded-2xl shadow-sm border border-mauve/20 p-6 space-y-4">
+      <form method="POST">
+        {% csrf_token %}
+        <div class="space-y-4">
+
+          <!-- Email -->
+          <div>
+            <label class="block text-xs text-charcoal/50 uppercase tracking-wide mb-1">Correo electrónico</label>
+            <input type="email" name="email" required autofocus
+                   value="{{ form.email.value|default:'' }}"
+                   class="w-full border border-mauve/30 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:border-mauve bg-cream transition-colors"/>
+            {% if form.email.errors %}
+              <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label class="block text-xs text-charcoal/50 uppercase tracking-wide mb-1">Contraseña</label>
+            <input type="password" name="password1" required
+                   class="w-full border border-mauve/30 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:border-mauve bg-cream transition-colors"/>
+            {% if form.password1.errors %}
+              <p class="text-red-500 text-xs mt-1">{{ form.password1.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Confirmar password -->
+          <div>
+            <label class="block text-xs text-charcoal/50 uppercase tracking-wide mb-1">Confirmar contraseña</label>
+            <input type="password" name="password2" required
+                   class="w-full border border-mauve/30 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:border-mauve bg-cream transition-colors"/>
+            {% if form.password2.errors %}
+              <p class="text-red-500 text-xs mt-1">{{ form.password2.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Errores generales -->
+          {% if form.non_field_errors %}
+          <div class="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2 rounded-xl">
+            {{ form.non_field_errors.0 }}
+          </div>
+          {% endif %}
+
+          <button type="submit"
+                  class="w-full bg-mauve hover:bg-mauve2 text-white font-semibold
+                         py-3 rounded-full transition-colors text-sm">
+            Crear cuenta
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <p class="text-center mt-4 text-sm text-charcoal/50">
+      ¿Ya tienes cuenta?
+      <a href="{% url 'store:login' %}" class="text-mauve hover:underline font-medium">Inicia sesión</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

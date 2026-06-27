@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Mi cuenta — Brana{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-12">
+
+  <div class="bg-white rounded-2xl shadow-sm border border-mauve/20 p-8 text-center">
+
+    <!-- Avatar -->
+    <div class="w-16 h-16 rounded-full bg-mauve flex items-center justify-center mx-auto mb-4">
+      <span class="text-peach font-semibold text-2xl">
+        {{ request.user.email|first|upper }}
+      </span>
+    </div>
+
+    <h1 class="text-xl font-semibold text-charcoal">Mi cuenta</h1>
+    <p class="text-sm text-charcoal/50 mt-1">{{ request.user.email }}</p>
+    <p class="text-xs text-charcoal/40 mt-1">
+      Miembro desde {{ request.user.date_joined|date:"d/m/Y" }}
+    </p>
+
+    <div class="mt-6 pt-6 border-t border-mauve/20 space-y-3">
+      <a href="{% url 'store:catalog' %}"
+         class="block w-full bg-peach hover:bg-mauve hover:text-white text-charcoal
+                text-sm font-semibold py-3 rounded-full transition-colors">
+        Ver catálogo
+      </a>
+      <a href="{% url 'store:logout' %}"
+         class="block w-full border border-mauve/30 text-mauve hover:bg-red-50 hover:border-red-200
+                hover:text-red-400 text-sm font-semibold py-3 rounded-full transition-colors">
+        Cerrar sesión
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

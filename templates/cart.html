@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Tu bolsa — Brana{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-10">
+  <h1 class="text-2xl font-semibold text-charcoal mb-8">Tu bolsa 🛍️</h1>
+
+  {% if cart_items %}
+  <div class="grid md:grid-cols-3 gap-8">
+
+    <!-- Lista de productos -->
+    <div class="md:col-span-2 space-y-4">
+      {% for item in cart_items %}
+      <div class="flex gap-4 bg-white rounded-2xl p-4 border border-mauve/10 shadow-sm">
+        <!-- Imagen -->
+        <div class="w-20 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-peach/20">
+          {% if item.product.image %}
+            <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}"
+                 class="w-full h-full object-cover">
+          {% else %}
+            <div class="w-full h-full flex items-center justify-center text-2xl">🛍️</div>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-charcoal text-sm truncate">{{ item.product.name }}</h3>
+          <p class="text-xs text-charcoal/50 mt-0.5">
+            {{ item.product.get_gender_display }} · {{ item.product.get_style_display }}
+          </p>
+          <p class="text-mauve font-semibold mt-2">${{ item.product.price }}</p>
+          <p class="text-xs text-charcoal/50">Cantidad: {{ item.qty }}</p>
+        </div>
+
+        <!-- Subtotal + eliminar -->
+        <div class="flex flex-col items-end justify-between">
+          <span class="text-sm font-semibold text-charcoal">${{ item.subtotal }}</span>
+          <button onclick="removeFromCart({{ item.product.id }})"
+                  class="text-xs text-red-400 hover:text-red-600 transition-colors">
+            Eliminar
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Resumen -->
+    <div class="bg-white rounded-2xl p-6 border border-mauve/10 shadow-sm h-fit sticky top-24">
+      <h2 class="font-semibold text-charcoal mb-4">Resumen</h2>
+      <div class="space-y-2 text-sm text-charcoal/70">
+        <div class="flex justify-between">
+          <span>Productos</span>
+          <span>{{ cart_items|length }}</span>
+        </div>
+        <div class="flex justify-between font-semibold text-charcoal text-base border-t border-mauve/10 pt-3 mt-3">
+          <span>Total</span>
+          <span>${{ total }}</span>
+        </div>
+      </div>
+      <button onclick="simulatePurchase()"
+              class="mt-5 w-full bg-mauve hover:bg-mauve2 text-white text-sm font-semibold
+                     py-3 rounded-full transition-colors shadow-md">
+        Simular Compra ✓
+      </button>
+      <a href="{% url 'store:catalog' %}"
+         class="block text-center text-sm text-mauve hover:underline mt-3">
+        ← Seguir comprando
+      </a>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="text-center py-24">
+    <div class="text-6xl mb-4">🛍️</div>
+    <h3 class="text-lg font-semibold text-charcoal mb-2">Tu bolsa está vacía</h3>
+    <p class="text-sm text-charcoal/50 mb-6">Agrega productos desde el catálogo.</p>
+    <a href="{% url 'store:catalog' %}"
+       class="inline-block bg-mauve text-white text-sm font-semibold
+              px-6 py-2.5 rounded-full hover:bg-mauve2 transition-colors">
+      Ver catálogo
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+  // Al eliminar desde esta página, recargamos para refrescar la vista completa
+  async function removeFromCart(productId) {
+    const res  = await fetch("{% url 'store:cart_remove' %}", {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({ product_id: productId }),
+    });
+    const data = await res.json();
+    if (data.ok) window.location.reload();
+  }
+
+  async function simulatePurchase() {
+    const res  = await fetch("{% url 'store:simulate_purchase' %}", {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body:    JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('¡Compra realizada! 🎉');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      showToast('Error: ' + data.errors.join(', '));
+    }
+  }
+</script>
+{% endblock %}
+{% endblock %}

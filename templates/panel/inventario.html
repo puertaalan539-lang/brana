@@ -1,0 +1,319 @@
+{% extends 'panel/base_panel.html' %}
+{% block title %}Inventario — Panel Brana{% endblock %}
+
+{% block content %}
+<div class="p-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-xl font-semibold text-[#3D3535]">Inventario</h1>
+      <p class="text-sm text-[#3D3535]/50">{{ products|length }} productos registrados</p>
+    </div>
+    <button onclick="abrirModalCrear()"
+            class="bg-[#C7AFB3] hover:bg-[#b09a9e] text-white text-sm font-semibold
+                   px-5 py-2.5 rounded-full transition-colors flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Nuevo producto
+    </button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-white rounded-2xl border border-[#C7AFB3]/20 overflow-hidden shadow-sm">
+    <table class="w-full text-sm">
+      <thead class="bg-[#FFE8DB]/40 border-b border-[#C7AFB3]/20">
+        <tr>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Producto</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Genero</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Estilo</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Tallas</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Precio</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Stock</th>
+          <th class="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#3D3535]/50 font-medium">Estado</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-[#C7AFB3]/10">
+        {% for p in products %}
+        <tr class="hover:bg-[#FDFAF8] transition-colors" id="row-{{ p.id }}">
+          <!-- Imagen + nombre -->
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              {% if p.image %}
+                <img src="{{ p.image.url }}" alt="{{ p.name }}"
+                     class="w-10 h-10 rounded-xl object-cover flex-shrink-0">
+              {% else %}
+                <div class="w-10 h-10 rounded-xl bg-[#FFE8DB] flex items-center justify-center text-lg flex-shrink-0">🛍️</div>
+              {% endif %}
+              <div>
+                <p class="font-medium text-[#3D3535]">{{ p.name }}</p>
+                <p class="text-xs text-[#3D3535]/40">ID: {{ p.id }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-[#3D3535]/70">{{ p.get_gender_display }}</td>
+          <td class="px-4 py-3 text-[#3D3535]/70">{{ p.get_style_display }}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-1 flex-wrap">
+              {% for s in p.sizes.all %}
+                <span class="text-[10px] bg-[#FFE8DB] text-[#3D3535]/70 px-1.5 py-0.5 rounded-md">{{ s.name }}</span>
+              {% endfor %}
+            </div>
+          </td>
+          <td class="px-4 py-3 font-semibold text-[#C7AFB3]">${{ p.price }}</td>
+          <!-- Stock con +/- -->
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <button onclick="ajustarStock({{ p.id }}, -1)"
+                      class="w-6 h-6 rounded-full border border-[#C7AFB3]/40 text-[#C7AFB3]
+                             hover:bg-[#C7AFB3] hover:text-white transition-colors text-xs font-bold">−</button>
+              <span id="stock-{{ p.id }}" class="font-semibold w-6 text-center">{{ p.stock }}</span>
+              <button onclick="ajustarStock({{ p.id }}, 1)"
+                      class="w-6 h-6 rounded-full border border-[#C7AFB3]/40 text-[#C7AFB3]
+                             hover:bg-[#C7AFB3] hover:text-white transition-colors text-xs font-bold">+</button>
+            </div>
+          </td>
+          <!-- Estado -->
+          <td class="px-4 py-3">
+            <span class="text-xs px-2 py-1 rounded-full font-medium
+                         {% if p.is_active %}bg-green-100 text-green-600{% else %}bg-red-100 text-red-400{% endif %}">
+              {% if p.is_active %}Activo{% else %}Inactivo{% endif %}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <button onclick="abrirModalEditar({{ p.id }}, '{{ p.name }}', '{{ p.gender }}', '{{ p.style }}', {{ p.price }}, {{ p.stock }}, '{{ p.is_active|yesno:"true,false" }}', [{% for s in p.sizes.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"
+                    class="text-xs text-[#C7AFB3] hover:underline">Editar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ── MODAL CREAR PRODUCTO ── -->
+<div id="modal-crear" class="fixed inset-0 bg-black/30 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#C7AFB3]/20">
+      <h2 class="font-semibold text-[#3D3535]">Nuevo producto</h2>
+      <button onclick="cerrarModal('modal-crear')" class="text-[#3D3535]/40 hover:text-[#3D3535]">✕</button>
+    </div>
+    <form id="form-crear" enctype="multipart/form-data" class="px-6 py-4 space-y-4">
+      {% csrf_token %}
+      <!-- Imagen -->
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Foto del producto</label>
+        <input type="file" name="image" accept="image/*"
+               class="w-full text-sm border border-[#C7AFB3]/40 rounded-xl px-3 py-2 bg-[#FDFAF8]"/>
+      </div>
+      <!-- Nombre -->
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Nombre</label>
+        <input type="text" name="name" required
+               class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+      </div>
+      <!-- Genero + Estilo -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Genero</label>
+          <select name="gender" class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]">
+            {% for val, label in gender_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Estilo</label>
+          <select name="style" class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]">
+            {% for val, label in style_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <!-- Precio + Stock -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Precio ($)</label>
+          <input type="number" name="price" step="0.01" min="30" max="350" required
+                 class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Stock inicial</label>
+          <input type="number" name="stock" min="0" value="0"
+                 class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+        </div>
+      </div>
+      <!-- Tallas -->
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-2">Tallas disponibles</label>
+        <div class="flex gap-2 flex-wrap">
+          {% for size in sizes %}
+          <label class="flex items-center gap-1 text-sm cursor-pointer">
+            <input type="checkbox" name="sizes" value="{{ size.id }}"
+                   class="accent-[#C7AFB3]"/> {{ size.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <!-- Descripcion -->
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Descripcion (opcional)</label>
+        <textarea name="description" rows="2"
+                  class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8] resize-none"></textarea>
+      </div>
+      <button type="button" onclick="crearProducto()"
+              class="w-full bg-[#C7AFB3] hover:bg-[#b09a9e] text-white font-semibold py-3 rounded-full text-sm transition-colors">
+        Guardar producto
+      </button>
+    </form>
+  </div>
+</div>
+
+
+<!-- ── MODAL EDITAR ── -->
+<div id="modal-editar" class="fixed inset-0 bg-black/30 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#C7AFB3]/20">
+      <h2 class="font-semibold text-[#3D3535]">Editar producto</h2>
+      <button onclick="cerrarModal('modal-editar')" class="text-[#3D3535]/40 hover:text-[#3D3535]">✕</button>
+    </div>
+    <form id="form-editar" enctype="multipart/form-data" class="px-6 py-4 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" id="edit-id"/>
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Nueva foto (opcional)</label>
+        <input type="file" name="image" accept="image/*"
+               class="w-full text-sm border border-[#C7AFB3]/40 rounded-xl px-3 py-2 bg-[#FDFAF8]"/>
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Nombre</label>
+        <input type="text" id="edit-name" name="name" required
+               class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#C7AFB3] bg-[#FDFAF8]"/>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Genero</label>
+          <select id="edit-gender" name="gender" class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none bg-[#FDFAF8]">
+            {% for val, label in gender_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Estilo</label>
+          <select id="edit-style" name="style" class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none bg-[#FDFAF8]">
+            {% for val, label in style_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Precio ($)</label>
+          <input type="number" id="edit-price" name="price" step="0.01" min="30" max="350"
+                 class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none bg-[#FDFAF8]"/>
+        </div>
+        <div>
+          <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Stock</label>
+          <input type="number" id="edit-stock" name="stock" min="0"
+                 class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none bg-[#FDFAF8]"/>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-2">Tallas</label>
+        <div class="flex gap-2 flex-wrap" id="edit-sizes">
+          {% for size in sizes %}
+          <label class="flex items-center gap-1 text-sm cursor-pointer">
+            <input type="checkbox" name="sizes" value="{{ size.id }}" class="edit-size-cb accent-[#C7AFB3]"/> {{ size.name }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-[#3D3535]/50 mb-1">Estado</label>
+        <select id="edit-active" name="is_active" class="w-full border border-[#C7AFB3]/40 rounded-xl px-3 py-2 text-sm focus:outline-none bg-[#FDFAF8]">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+      <button type="button" onclick="guardarEdicion()"
+              class="w-full bg-[#C7AFB3] hover:bg-[#b09a9e] text-white font-semibold py-3 rounded-full text-sm transition-colors">
+        Guardar cambios
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function abrirModalCrear() {
+    document.getElementById('modal-crear').classList.remove('hidden');
+  }
+
+  function cerrarModal(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  function abrirModalEditar(id, name, gender, style, price, stock, active, sizeIds) {
+    document.getElementById('edit-id').value    = id;
+    document.getElementById('edit-name').value  = name;
+    document.getElementById('edit-price').value = price;
+    document.getElementById('edit-stock').value = stock;
+    document.getElementById('edit-gender').value = gender;
+    document.getElementById('edit-style').value  = style;
+    document.getElementById('edit-active').value = active;
+    document.querySelectorAll('.edit-size-cb').forEach(cb => {
+      cb.checked = sizeIds.includes(parseInt(cb.value));
+    });
+    document.getElementById('modal-editar').classList.remove('hidden');
+  }
+
+  async function crearProducto() {
+    const form = document.getElementById('form-crear');
+    const fd   = new FormData(form);
+    const res  = await fetch("{% url 'store:panel_producto_crear' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+      body: fd,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showPanelToast('Producto "' + data.name + '" creado. Recarga para verlo.');
+      cerrarModal('modal-crear');
+      form.reset();
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showPanelToast('Error al crear producto.');
+    }
+  }
+
+  async function guardarEdicion() {
+    const id = document.getElementById('edit-id').value;
+    const fd = new FormData(document.getElementById('form-editar'));
+    const res = await fetch(`/panel/inventario/editar/${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+      body: fd,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showPanelToast('Producto actualizado.');
+      cerrarModal('modal-editar');
+      setTimeout(() => location.reload(), 1200);
+    }
+  }
+
+  async function ajustarStock(id, delta) {
+    const fd = new FormData();
+    fd.append('delta', delta);
+    const res  = await fetch(`/panel/inventario/stock/${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+      body: fd,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById(`stock-${id}`).textContent = data.stock;
+    }
+  }
+</script>
+{% endblock %}

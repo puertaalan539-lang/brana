@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Iniciar sesión — Brana{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 rounded-full bg-mauve flex items-center justify-center mx-auto mb-3">
+        <span class="text-peach font-semibold text-lg">br</span>
+      </div>
+      <h1 class="text-2xl font-semibold text-charcoal">Bienvenida de vuelta</h1>
+      <p class="text-sm text-charcoal/50 mt-1">Inicia sesión en tu cuenta Brana</p>
+    </div>
+
+    <!-- Error -->
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-2xl mb-4">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Formulario -->
+    <div class="bg-white rounded-2xl shadow-sm border border-mauve/20 p-6 space-y-4">
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs text-charcoal/50 uppercase tracking-wide mb-1">Correo electrónico</label>
+            <input type="email" name="email" required autofocus
+                   value="{{ form.email.value|default:'' }}"
+                   class="w-full border border-mauve/30 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:border-mauve bg-cream transition-colors"/>
+          </div>
+
+          <div>
+            <label class="block text-xs text-charcoal/50 uppercase tracking-wide mb-1">Contraseña</label>
+            <input type="password" name="password" required
+                   class="w-full border border-mauve/30 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:border-mauve bg-cream transition-colors"/>
+          </div>
+
+          <button type="submit"
+                  class="w-full bg-mauve hover:bg-mauve2 text-white font-semibold
+                         py-3 rounded-full transition-colors text-sm mt-2">
+            Iniciar sesión
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <p class="text-center mt-4 text-sm text-charcoal/50">
+      ¿No tienes cuenta?
+      <a href="{% url 'store:register' %}" class="text-mauve hover:underline font-medium">Regístrate aquí</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

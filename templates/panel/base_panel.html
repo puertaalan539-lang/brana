@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Panel Brana{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Jost', sans-serif; background: #FDFAF8; color: #3D3535; }
+    .sidebar-link { transition: all 0.2s; }
+    .sidebar-link.active { background: #C7AFB3; color: white; }
+    .sidebar-link:not(.active):hover { background: #FFE8DB; }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="w-56 bg-white border-r border-[#C7AFB3]/20 flex flex-col flex-shrink-0">
+
+    <!-- Logo -->
+    <div class="px-5 py-6 border-b border-[#C7AFB3]/20">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-[#C7AFB3] flex items-center justify-center">
+          <span class="text-[#FFE8DB] font-semibold text-xs">br</span>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-[#3D3535]">brana</p>
+          <p class="text-[9px] text-[#C7AFB3] uppercase tracking-widest">panel admin</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <a href="{% url 'store:panel_inventario' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'panel_inventario' %}active{% endif %}
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
+        </svg>
+        Inventario
+      </a>
+
+      <a href="{% url 'store:panel_ventas' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'panel_ventas' %}active{% endif %}
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+        </svg>
+        Ventas
+      </a>
+    </nav>
+
+    <!-- Footer sidebar -->
+    <div class="px-3 py-4 border-t border-[#C7AFB3]/20 space-y-2">
+      <!-- Botón reporte -->
+      <button onclick="enviarReporte()"
+              class="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs
+                     text-[#3D3535]/60 hover:bg-[#FFE8DB] transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Enviar reporte
+      </button>
+
+      <a href="/" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs
+                         text-[#3D3535]/60 hover:bg-[#FFE8DB] transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Ver tienda
+      </a>
+
+      <a href="{% url 'store:panel_logout' %}"
+         class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs
+                text-red-400 hover:bg-red-50 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Cerrar sesion
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── CONTENIDO ── -->
+  <main class="flex-1 overflow-y-auto">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Toast -->
+  <div id="panel-toast"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3D3535] text-white
+              text-sm px-5 py-3 rounded-full shadow-lg opacity-0 pointer-events-none
+              flex items-center gap-2 z-50 transition-opacity duration-300">
+    <span id="panel-toast-msg"></span>
+  </div>
+
+  <script>
+    const CSRF = '{{ csrf_token }}';
+
+    function showPanelToast(msg, error=false) {
+      const t = document.getElementById('panel-toast');
+      document.getElementById('panel-toast-msg').textContent = msg;
+      t.style.opacity = '1';
+      setTimeout(() => t.style.opacity = '0', 3500);
+    }
+
+    async function enviarReporte() {
+      showPanelToast('Enviando reporte...');
+      const res  = await fetch("{% url 'store:panel_enviar_reporte' %}", {
+        method: 'GET',
+        headers: { 'X-CSRFToken': CSRF }
+      });
+      const data = await res.json();
+      showPanelToast(data.ok ? '¡Reporte enviado! 📊' : 'Error: ' + data.error);
+    }
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,1 @@
+web: gunicorn brana_project.wsgi --log-file -
