@@ -156,7 +156,14 @@
       </button>
     </div>
     <div id="cart-items-list" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-      <p class="text-center text-charcoal/50 text-sm mt-8">Tu bolsa está vacía 🛍️</p>
+      <!-- Mensajes informativos -->
+      <div class="bg-peach/50 border border-mauve/20 rounded-2xl px-4 py-3 text-xs text-charcoal/70 leading-relaxed">
+        La página es solo demostrativa, no puedes realizar compras aquí, solo pedidos.
+      </div>
+      <div class="bg-peach/50 border border-mauve/20 rounded-2xl px-4 py-3 text-xs text-charcoal/70 leading-relaxed">
+        Al presionar "Confirmar pedido" enviaremos tu solicitud a un trabajador de Brana. Tendrás que recogerlo personalmente en sus instalaciones. Al llegar no olvides mostrar el código de tu pedido.
+      </div>
+      <p class="text-center text-charcoal/50 text-sm mt-4">Tu bolsa está vacía 🛍️</p>
     </div>
     <div class="px-5 py-4 border-t border-mauve/20 space-y-3">
       <div class="flex justify-between font-semibold text-base">
@@ -164,16 +171,16 @@
         <span id="cart-subtotal-display">$0.00</span>
       </div>
       {% if request.user.is_authenticated %}
-        <button onclick="simulatePurchase()"
+        <button onclick="confirmOrder()"
                 class="w-full bg-mauve hover:bg-mauve2 text-white text-sm font-semibold
                        py-3 rounded-full transition-colors">
-          Confirmar compra ✓
+          Confirmar pedido ✓
         </button>
       {% else %}
         <a href="{% url 'store:login' %}?next={% url 'store:cart' %}"
            class="block text-center w-full bg-mauve hover:bg-mauve2 text-white text-sm font-semibold
                   py-3 rounded-full transition-colors">
-          Inicia sesión para comprar
+          Inicia sesión para pedir
         </a>
       {% endif %}
       <a href="{% url 'store:cart' %}" class="block text-center text-sm text-mauve hover:underline">
@@ -181,6 +188,29 @@
       </a>
     </div>
   </aside>
+
+  <!-- ══════════════ MODAL CÓDIGO DE PEDIDO ══════════════ -->
+  <div id="order-modal" class="fixed inset-0 bg-black/40 z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="text-5xl mb-4">🎉</div>
+      <h2 class="text-xl font-semibold text-charcoal mb-2">Pedido confirmado</h2>
+      <p class="text-sm text-charcoal/60 mb-6">Tu solicitud fue enviada a Brana.</p>
+
+      <div class="bg-peach/50 border border-mauve/30 rounded-2xl py-6 mb-4">
+        <p class="text-xs uppercase tracking-wide text-charcoal/50 mb-1">Tu código de pedido</p>
+        <p id="order-code-display" class="text-4xl font-bold text-mauve tracking-widest"></p>
+      </div>
+
+      <p class="text-xs text-charcoal/50 leading-relaxed mb-6">
+        No olvides mostrar este código cuando llegues a Brana.
+      </p>
+
+      <button onclick="closeOrderModal()"
+              class="w-full bg-mauve hover:bg-mauve2 text-white font-semibold py-3 rounded-full text-sm transition-colors">
+        Entendido
+      </button>
+    </div>
+  </div>
 
   <!-- ══════════════ TOAST ══════════════ -->
   <div id="toast"
@@ -240,21 +270,27 @@
       if (data.ok) { updateBadge(data.cart_count); updateSubtotal(data.cart_subtotal); }
     }
 
-    async function simulatePurchase() {
-      const res  = await fetch("{% url 'store:simulate_purchase' %}", {
+    async function confirmOrder() {
+      const res  = await fetch("{% url 'store:confirm_order' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
         body: JSON.stringify({}),
       });
       const data = await res.json();
       if (data.ok) {
-        showToast('¡Compra realizada! 🎉');
         updateBadge(0);
         updateSubtotal('0.00');
         closeCart();
+        document.getElementById('order-code-display').textContent = data.code;
+        document.getElementById('order-modal').classList.remove('hidden');
       } else {
-        showToast('Error: ' + data.errors.join(', '));
+        showToast('Error: ' + data.error);
       }
+    }
+
+    function closeOrderModal() {
+      document.getElementById('order-modal').classList.add('hidden');
+      location.reload();
     }
 
     function updateBadge(count) {

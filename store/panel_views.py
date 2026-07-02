@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Product, Size, Sale
+from .models import Product, Size, Sale, Order
 
 
 # ── Login / Logout ────────────────────────────────────────────────────────────
@@ -231,3 +231,38 @@ def panel_enviar_reporte(request):
         return JsonResponse({'ok': True, 'message': 'Reporte enviado correctamente.'})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)})
+# ── Pedidos ──────────────────────────────────────────────────────────────────
+
+@login_required(login_url='/panel/login/')
+def panel_pedidos(request):
+    return render(request, 'panel/pedidos.html')
+
+
+@login_required(login_url='/panel/login/')
+def panel_buscar_pedido(request):
+    code = request.GET.get('code', '').strip()
+
+    try:
+        order = Order.objects.select_related('user').prefetch_related('items__product', 'items__size').get(code=code)
+    except Order.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'No se encontró ningún pedido con ese código.'})
+
+    items = []
+    for item in order.items.all():
+        items.append({
+            'product_name': item.product.name if item.product else 'Producto eliminado',
+            'size':         item.size.name if item.size else '—',
+            'quantity':     item.quantity,
+            'unit_price':   str(item.unit_price),
+            'subtotal':     str(item.subtotal),
+        })
+
+    return JsonResponse({
+        'ok':         True,
+        'code':       order.code,
+        'user_email': order.user.email if order.user else 'Usuario eliminado',
+        'status':     order.get_status_display(),
+        'total':      str(order.total),
+        'created_at': order.created_at.strftime('%d/%m/%Y %H:%M'),
+        'items':      items,
+    })

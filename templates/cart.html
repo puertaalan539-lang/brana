@@ -57,10 +57,10 @@
           <span>${{ total }}</span>
         </div>
       </div>
-      <button onclick="simulatePurchase()"
+      <button onclick="confirmOrder()"
               class="mt-5 w-full bg-mauve hover:bg-mauve2 text-white text-sm font-semibold
                      py-3 rounded-full transition-colors shadow-md">
-        Simular Compra ✓
+        Confirmar pedido ✓
       </button>
       <a href="{% url 'store:catalog' %}"
          class="block text-center text-sm text-mauve hover:underline mt-3">
@@ -96,18 +96,18 @@
     if (data.ok) window.location.reload();
   }
 
-  async function simulatePurchase() {
-    const res  = await fetch("{% url 'store:simulate_purchase' %}", {
+  async function confirmOrder() {
+    const res  = await fetch("{% url 'store:confirm_order' %}", {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
       body:    JSON.stringify({}),
     });
     const data = await res.json();
     if (data.ok) {
-      showToast('¡Compra realizada! 🎉');
-      setTimeout(() => window.location.reload(), 1500);
+      alert('¡Pedido confirmado! Tu código es: ' + data.code + '\nNo olvides mostrarlo cuando llegues a Brana.');
+      window.location.reload();
     } else {
-      showToast('Error: ' + data.errors.join(', '));
+      showToast('Error: ' + data.error);
     }
   }
 </script>

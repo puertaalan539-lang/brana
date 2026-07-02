@@ -10,7 +10,7 @@ urlpatterns = [
     path('carrito/',              views.cart_view,         name='cart'),
     path('api/cart/add/',         views.cart_add,          name='cart_add'),
     path('api/cart/remove/',      views.cart_remove,       name='cart_remove'),
-    path('api/purchase/',         views.simulate_purchase, name='simulate_purchase'),
+    path('api/order/confirm/',    views.confirm_order,     name='confirm_order'),
 
     # ── Auth usuarios ───────────────────────────────────────────
     path('cuenta/registro/',      auth_views.user_register, name='register'),
@@ -26,7 +26,9 @@ urlpatterns = [
     path('panel/inventario/editar/<int:pk>/', panel_views.panel_producto_editar, name='panel_producto_editar'),
     path('panel/inventario/stock/<int:pk>/',  panel_views.panel_stock_ajustar,   name='panel_stock_ajustar'),
     path('panel/ventas/',                     panel_views.panel_ventas,          name='panel_ventas'),
-    path('panel/ventas/buscar/',              panel_views.panel_buscar_producto,  name='panel_buscar_producto'),
+    path('panel/ventas/buscar/',              panel_views.panel_buscar_producto, name='panel_buscar_producto'),
     path('panel/ventas/registrar/',           panel_views.panel_registrar_venta, name='panel_registrar_venta'),
     path('panel/reporte/',                    panel_views.panel_enviar_reporte,  name='panel_enviar_reporte'),
+    path('panel/pedidos/',                    panel_views.panel_pedidos,         name='panel_pedidos'),
+    path('panel/pedidos/buscar/',             panel_views.panel_buscar_pedido,   name='panel_buscar_pedido'),
 ]

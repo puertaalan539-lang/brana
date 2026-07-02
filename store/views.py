@@ -1,15 +1,20 @@
-# store/views.py
 import json
-from django.shortcuts      import render, get_object_or_404
-from django.http           import JsonResponse
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .models import Product, Size
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+
+from .models import Product, Size, Order, OrderItem
 
 
-# ─── Utilidad: carrito en sesión ────────────────────────────────────────────
+# ── Utilidad: carrito en sesión ────────────────────────────────────────────
 
 def _get_cart(request):
-    """Devuelve el carrito guardado en la sesión como dict {product_id: qty}."""
     return request.session.get('cart', {})
 
 
@@ -18,15 +23,14 @@ def _save_cart(request, cart):
     request.session.modified = True
 
 
-# ─── Vista principal: catálogo con filtros ───────────────────────────────────
+# ── Vista principal: catálogo con filtros ───────────────────────────────────
 
 def catalog(request):
     products = Product.objects.filter(is_active=True).prefetch_related('sizes')
 
-    # Filtros GET
-    gender     = request.GET.get('gender', '')
-    style      = request.GET.get('style', '')
-    size_name  = request.GET.get('size', '')
+    gender    = request.GET.get('gender', '')
+    style     = request.GET.get('style', '')
+    size_name = request.GET.get('size', '')
 
     if gender:
         products = products.filter(gender=gender)
@@ -35,34 +39,31 @@ def catalog(request):
     if size_name:
         products = products.filter(sizes__name=size_name)
 
-    # Opciones de filtro disponibles
     genders = Product.GENDER_CHOICES
     styles  = Product.STYLE_CHOICES
     sizes   = Size.objects.all()
 
-    # Carrito para el navbar
     cart       = _get_cart(request)
     cart_count = sum(cart.values())
 
     context = {
-        'products':    products,
-        'genders':     genders,
-        'styles':      styles,
-        'sizes':       sizes,
+        'products':      products,
+        'genders':       genders,
+        'styles':        styles,
+        'sizes':         sizes,
         'active_gender': gender,
         'active_style':  style,
         'active_size':   size_name,
         'cart_count':    cart_count,
     }
 
-    # Si la petición viene de HTMX, devuelve sólo el grid parcial
     if request.headers.get('HX-Request'):
         return render(request, 'partials/product_grid.html', context)
 
     return render(request, 'index.html', context)
 
 
-# ─── Detalle de producto ─────────────────────────────────────────────────────
+# ── Detalle de producto ─────────────────────────────────────────────────────
 
 def product_detail(request, slug):
     product    = get_object_or_404(Product, slug=slug, is_active=True)
@@ -74,7 +75,7 @@ def product_detail(request, slug):
     })
 
 
-# ─── API: añadir al carrito (AJAX/HTMX) ─────────────────────────────────────
+# ── API: añadir al carrito ───────────────────────────────────────────────────
 
 @require_POST
 def cart_add(request):
@@ -92,14 +93,12 @@ def cart_add(request):
     cart_subtotal = _calculate_subtotal(cart)
 
     return JsonResponse({
-        'ok':        True,
+        'ok':            True,
         'cart_count':    cart_count,
         'cart_subtotal': str(cart_subtotal),
-        'message':   f'"{product.name}" añadido al carrito.',
+        'message':       f'"{product.name}" añadido al pedido.',
     })
 
-
-# ─── API: quitar del carrito ─────────────────────────────────────────────────
 
 @require_POST
 def cart_remove(request):
@@ -120,8 +119,6 @@ def cart_remove(request):
         'cart_subtotal': str(cart_subtotal),
     })
 
-
-# ─── Vista: ver carrito ───────────────────────────────────────────────────────
 
 def cart_view(request):
     cart       = _get_cart(request)
@@ -148,33 +145,6 @@ def cart_view(request):
     })
 
 
-# ─── Simulación de compra (resta stock) ──────────────────────────────────────
-
-@require_POST
-def simulate_purchase(request):
-    cart = _get_cart(request)
-    errors = []
-
-    for pid, qty in cart.items():
-        try:
-            p = Product.objects.get(id=int(pid))
-            if p.stock >= qty:
-                p.stock -= qty
-                p.save(update_fields=['stock'])
-            else:
-                errors.append(f'Stock insuficiente para "{p.name}" (disponible: {p.stock}).')
-        except Product.DoesNotExist:
-            errors.append(f'Producto ID {pid} no encontrado.')
-
-    if not errors:
-        _save_cart(request, {})   # vaciar carrito
-        return JsonResponse({'ok': True, 'message': '¡Compra simulada con éxito! Stock actualizado.'})
-
-    return JsonResponse({'ok': False, 'errors': errors}, status=400)
-
-
-# ─── Helper privado ───────────────────────────────────────────────────────────
-
 def _calculate_subtotal(cart):
     total = 0
     for pid, qty in cart.items():
@@ -184,3 +154,86 @@ def _calculate_subtotal(cart):
         except Product.DoesNotExist:
             pass
     return round(total, 2)
+
+
+# ── Confirmar pedido (antes "simular compra") ────────────────────────────────
+
+@login_required(login_url='/cuenta/login/')
+@require_POST
+def confirm_order(request):
+    cart = _get_cart(request)
+    if not cart:
+        return JsonResponse({'ok': False, 'error': 'Tu carrito está vacío.'})
+
+    errors = []
+    items_info = []
+    total = 0
+
+    # Validar stock primero
+    for pid, qty in cart.items():
+        try:
+            p = Product.objects.get(id=int(pid))
+            if p.stock < qty:
+                errors.append(f'Stock insuficiente para "{p.name}" (disponible: {p.stock}).')
+        except Product.DoesNotExist:
+            errors.append(f'Producto ID {pid} no encontrado.')
+
+    if errors:
+        return JsonResponse({'ok': False, 'error': ' '.join(errors)})
+
+    # Crear el pedido
+    order = Order.objects.create(user=request.user, total=0)
+
+    for pid, qty in cart.items():
+        p = Product.objects.get(id=int(pid))
+        subtotal = p.price * qty
+
+        OrderItem.objects.create(
+            order=order, product=p, quantity=qty,
+            unit_price=p.price, subtotal=subtotal,
+        )
+
+        p.stock -= qty
+        p.save(update_fields=['stock'])
+
+        items_info.append(f'- {p.name} x{qty} — ${subtotal}')
+        total += subtotal
+
+    order.total = total
+    order.save(update_fields=['total'])
+
+    # Vaciar carrito
+    _save_cart(request, {})
+
+    # Enviar correo al administrador
+    _enviar_correo_pedido(order, items_info, request.user)
+
+    return JsonResponse({
+        'ok':    True,
+        'code':  order.code,
+        'total': str(order.total),
+    })
+
+
+def _enviar_correo_pedido(order, items_info, user):
+    try:
+        cuerpo = (
+            f"Nuevo pedido recibido en Brana 🌸\n\n"
+            f"Codigo de pedido: {order.code}\n"
+            f"Cliente: {user.email}\n"
+            f"Fecha: {order.created_at.strftime('%d/%m/%Y %H:%M')}\n\n"
+            f"Productos:\n" + "\n".join(items_info) + "\n\n"
+            f"TOTAL: ${order.total}\n\n"
+            f"El cliente debe presentar el codigo {order.code} al recoger su pedido."
+        )
+
+        msg = MIMEText(cuerpo, 'plain')
+        msg['From']    = settings.EMAIL_HOST_USER
+        msg['To']      = settings.ADMIN_EMAIL
+        msg['Subject'] = f'Nuevo Pedido Brana — Codigo #{order.code}'
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+            server.sendmail(settings.EMAIL_HOST_USER, settings.ADMIN_EMAIL, msg.as_string())
+    except Exception as e:
+        print(f'Error enviando correo de pedido: {e}')

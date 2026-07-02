@@ -1,13 +1,23 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.text import slugify
+from django.contrib.auth.models import User
 import unicodedata
+import random
 
 
 def clean_slug(text):
     text = unicodedata.normalize('NFKD', text)
     text = text.encode('ascii', 'ignore').decode('ascii')
     return slugify(text)
+
+
+def generar_codigo_pedido():
+    """Genera un código único de 4 dígitos para el pedido."""
+    while True:
+        codigo = str(random.randint(1000, 9999))
+        if not Order.objects.filter(code=codigo).exists():
+            return codigo
 
 
 class Size(models.Model):
@@ -88,9 +98,50 @@ class Sale(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
 
     def __str__(self):
-        return f"{self.product} x{self.quantity} — ${self.total} ({self.get_source_display()})"
+        return f"{self.product} x{self.quantity} - ${self.total} ({self.get_source_display()})"
 
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
+
+
+# ── Pedidos para recoger en tienda ──────────────────────────────────────────
+
+class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('listo',     'Listo para recoger'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+
+    code       = models.CharField(max_length=4, unique=True, default=generar_codigo_pedido, verbose_name="Codigo")
+    user       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Cliente")
+    total      = models.DecimalField(max_digits=9, decimal_places=2, verbose_name="Total")
+    status     = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pendiente', verbose_name="Estado")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha del pedido")
+
+    def __str__(self):
+        return f"Pedido #{self.code} — {self.user} — ${self.total}"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Pedido"
+        verbose_name_plural = "Pedidos"
+
+
+class OrderItem(models.Model):
+    order      = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product    = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    size       = models.ForeignKey(Size, on_delete=models.SET_NULL, null=True, blank=True)
+    quantity   = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=7, decimal_places=2)
+    subtotal   = models.DecimalField(max_digits=9, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.product} x{self.quantity}"
+
+    class Meta:
+        verbose_name = "Producto del pedido"
+        verbose_name_plural = "Productos del pedido"
