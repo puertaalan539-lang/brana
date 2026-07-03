@@ -63,42 +63,39 @@ class Command(BaseCommand):
     help = 'Poblar la base de datos con productos de ejemplo para Brana.'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.MIGRATE_HEADING('Iniciando seed de Brana Clothes & More...'))
+        # Si ya hay productos no hacer nada
+        if Product.objects.exists():
+            self.stdout.write(self.style.WARNING('Ya existen productos, seed omitido.'))
+            return
+
+        self.stdout.write(self.style.MIGRATE_HEADING('Iniciando seed de Brana...'))
 
         size_names = ['XS', 'S', 'M', 'L', 'XL']
         sizes = {}
         for sn in size_names:
-            obj, created = Size.objects.get_or_create(name=sn)
+            obj, _ = Size.objects.get_or_create(name=sn)
             sizes[sn] = obj
-            if created:
-                self.stdout.write(f'  Talla creada: {sn}')
 
         created_count = 0
         for data in SEED_PRODUCTS:
             style_key = data['style']
-            slug_base = clean_slug(data['name'])
+            slug_base  = clean_slug(data['name'])
 
             if Product.objects.filter(slug=slug_base).exists():
-                self.stdout.write(f'  Ya existe: {data["name"]} (omitido)')
                 continue
 
             img_url  = PLACEHOLDER.get(style_key, PLACEHOLDER['casual'])
             img_file = _fetch_image(img_url)
 
             p = Product(
-                name        = data['name'],
-                slug        = slug_base,
-                description = data['description'],
-                price       = data['price'],
-                stock       = data['stock'],
-                gender      = data['gender'],
-                style       = style_key,
-                is_active   = True,
+                name=data['name'], slug=slug_base,
+                description=data['description'],
+                price=data['price'], stock=data['stock'],
+                gender=data['gender'], style=style_key,
+                is_active=True,
             )
-
             if img_file:
                 p.image.save(f"{slug_base}.jpg", img_file, save=False)
-
             p.save()
 
             for size_name in SIZE_MAP.get(style_key, []):
