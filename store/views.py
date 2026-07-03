@@ -1,9 +1,8 @@
 import json
 import smtplib
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
@@ -156,7 +155,7 @@ def _calculate_subtotal(cart):
     return round(total, 2)
 
 
-# ── Confirmar pedido (antes "simular compra") ────────────────────────────────
+# ── Confirmar pedido ────────────────────────────────────────────────────────
 
 @login_required(login_url='/cuenta/login/')
 @require_POST
@@ -165,11 +164,11 @@ def confirm_order(request):
     if not cart:
         return JsonResponse({'ok': False, 'error': 'Tu carrito está vacío.'})
 
-    errors = []
+    errors     = []
     items_info = []
-    total = 0
+    total      = 0
 
-    # Validar stock primero
+    # Validar stock
     for pid, qty in cart.items():
         try:
             p = Product.objects.get(id=int(pid))
@@ -181,11 +180,11 @@ def confirm_order(request):
     if errors:
         return JsonResponse({'ok': False, 'error': ' '.join(errors)})
 
-    # Crear el pedido
+    # Crear pedido
     order = Order.objects.create(user=request.user, total=0)
 
     for pid, qty in cart.items():
-        p = Product.objects.get(id=int(pid))
+        p        = Product.objects.get(id=int(pid))
         subtotal = p.price * qty
 
         OrderItem.objects.create(
@@ -205,7 +204,7 @@ def confirm_order(request):
     # Vaciar carrito
     _save_cart(request, {})
 
-    # Enviar correo al administrador
+    # Enviar correo al admin
     _enviar_correo_pedido(order, items_info, request.user)
 
     return JsonResponse({
@@ -219,15 +218,15 @@ def _enviar_correo_pedido(order, items_info, user):
     try:
         cuerpo = (
             f"Nuevo pedido recibido en Brana 🌸\n\n"
-            f"Codigo de pedido: {order.code}\n"
+            f"Codigo de pedido: #{order.code}\n"
             f"Cliente: {user.email}\n"
             f"Fecha: {order.created_at.strftime('%d/%m/%Y %H:%M')}\n\n"
             f"Productos:\n" + "\n".join(items_info) + "\n\n"
             f"TOTAL: ${order.total}\n\n"
-            f"El cliente debe presentar el codigo {order.code} al recoger su pedido."
+            f"El cliente debe presentar el codigo #{order.code} al recoger su pedido."
         )
 
-        msg = MIMEText(cuerpo, 'plain')
+        msg            = MIMEText(cuerpo, 'plain')
         msg['From']    = settings.EMAIL_HOST_USER
         msg['To']      = settings.ADMIN_EMAIL
         msg['Subject'] = f'Nuevo Pedido Brana — Codigo #{order.code}'
@@ -236,4 +235,4 @@ def _enviar_correo_pedido(order, items_info, user):
             server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
             server.sendmail(settings.EMAIL_HOST_USER, settings.ADMIN_EMAIL, msg.as_string())
     except Exception as e:
-        print(f'Error enviando correo de pedido: {e}')
+        print(f'Error enviando correo: {e}')
