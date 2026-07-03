@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py seed_data && python manage.py createsuperuser --noinput --username $DJANGO_SUPERUSER_USERNAME --email $DJANGO_SUPERUSER_EMAIL || true && gunicorn brana_project.wsgi --log-file - --bind 0.0.0.0:$PORT
+web: python manage.py migrate && python manage.py seed_data && python manage.py createsuperuser --noinput --username $DJANGO_SUPERUSER_USERNAME --email $DJANGO_SUPERUSER_EMAIL || true && gunicorn brana_project.wsgi:application --bind 0.0.0.0:$PORT
