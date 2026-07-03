@@ -269,6 +269,8 @@
 
   async function crearProducto() {
     const form = document.getElementById('form-crear');
+    const nombre = form.querySelector('[name="name"]').value.trim();
+    if (!nombre) { showPanelToast('El nombre es obligatorio.'); return; }
     const fd   = new FormData(form);
     const res  = await fetch("{% url 'store:panel_producto_crear' %}", {
       method: 'POST',
