@@ -12,7 +12,6 @@
     <div class="md:col-span-2 space-y-4">
       {% for item in cart_items %}
       <div class="flex gap-4 bg-white rounded-2xl p-4 border border-mauve/10 shadow-sm">
-        <!-- Imagen -->
         <div class="w-20 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-peach/20">
           {% if item.product.image %}
             <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}"
@@ -22,7 +21,6 @@
           {% endif %}
         </div>
 
-        <!-- Info -->
         <div class="flex-1 min-w-0">
           <h3 class="font-semibold text-charcoal text-sm truncate">{{ item.product.name }}</h3>
           <p class="text-xs text-charcoal/50 mt-0.5">
@@ -32,7 +30,6 @@
           <p class="text-xs text-charcoal/50">Cantidad: {{ item.qty }}</p>
         </div>
 
-        <!-- Subtotal + eliminar -->
         <div class="flex flex-col items-end justify-between">
           <span class="text-sm font-semibold text-charcoal">${{ item.subtotal }}</span>
           <button onclick="removeFromCart({{ item.product.id }})"
@@ -85,29 +82,44 @@
 
 {% block extra_js %}
 <script>
-  // Al eliminar desde esta página, recargamos para refrescar la vista completa
+  // CSRF definido localmente para esta página
+  const CART_CSRF = '{{ csrf_token }}';
+
   async function removeFromCart(productId) {
-    const res  = await fetch("{% url 'store:cart_remove' %}", {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body:    JSON.stringify({ product_id: productId }),
+    const res = await fetch("{% url 'store:cart_remove' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CART_CSRF },
+      body: JSON.stringify({ product_id: productId }),
     });
     const data = await res.json();
     if (data.ok) window.location.reload();
   }
 
   async function confirmOrder() {
-    const res  = await fetch("{% url 'store:confirm_order' %}", {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body:    JSON.stringify({}),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      alert('¡Pedido confirmado! Tu código es: ' + data.code + '\nNo olvides mostrarlo cuando llegues a Brana.');
-      window.location.reload();
-    } else {
-      showToast('Error: ' + data.error);
+    try {
+      const res = await fetch("{% url 'store:confirm_order' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CART_CSRF },
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('Error del servidor:', text);
+        alert('Error del servidor. Intenta de nuevo.');
+        return;
+      }
+
+      const data = await res.json();
+      if (data.ok) {
+        alert('¡Pedido confirmado! 🎉\n\nTu código es: ' + data.code + '\n\nNo olvides mostrarlo cuando llegues a Brana.');
+        window.location.href = '/';
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Error de conexión. Intenta de nuevo.');
     }
   }
 </script>
