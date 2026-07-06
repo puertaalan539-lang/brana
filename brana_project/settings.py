@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'store',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -91,3 +93,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'branaclothesandmore@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'branaclothesandmore@gmail.com')
+
+# Cloudinary
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    api_key    = os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure     = True,
+)
+
+# Usar Cloudinary para archivos de media en producción
+if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
