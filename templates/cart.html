@@ -82,8 +82,10 @@
 
 {% block extra_js %}
 <script>
-  // CSRF definido localmente para esta página
-  const CART_CSRF = '{{ csrf_token }}';
+  const CART_CSRF = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('csrftoken='))
+    ?.split('=')[1] || '{{ csrf_token }}';
 
   async function removeFromCart(productId) {
     const res = await fetch("{% url 'store:cart_remove' %}", {
@@ -96,17 +98,21 @@
   }
 
   async function confirmOrder() {
+    alert('Procesando tu pedido...');
     try {
       const res = await fetch("{% url 'store:confirm_order' %}", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CART_CSRF },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-CSRFToken': CART_CSRF,
+        },
         body: JSON.stringify({}),
       });
 
       if (!res.ok) {
         const text = await res.text();
         console.error('Error del servidor:', text);
-        alert('Error del servidor. Intenta de nuevo.');
+        alert('Error del servidor (' + res.status + '). Intenta de nuevo.');
         return;
       }
 
@@ -119,7 +125,7 @@
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Error de conexión. Intenta de nuevo.');
+      alert('Error de conexión: ' + err.message);
     }
   }
 </script>
